@@ -2,6 +2,7 @@ import time
 import win32gui
 import win32ui
 import win32con
+import pywintypes
 from ctypes import windll, byref, c_ulong, sizeof
 from PIL import Image, ImageGrab
 
@@ -99,8 +100,14 @@ def main():
     if not win32gui.IsWindow(hwnd):
         print("Selected window is no longer available.")
         return
-    win32gui.SetForegroundWindow(hwnd)
+    try:
+        win32gui.SetForegroundWindow(hwnd)
+    except pywintypes.error as e:
+        print(f"Could not set foreground window: {e}")
     time.sleep(0.5)
+    if not win32gui.IsWindow(hwnd):
+        print("Window became unavailable before capture.")
+        return
     screenshot_window(hwnd, "screenshot.png")
     print("Saved screenshot.png")
 
