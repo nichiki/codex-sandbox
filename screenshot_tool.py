@@ -4,7 +4,7 @@ import win32ui
 import win32con
 import pywintypes
 import ctypes
-from ctypes import windll, byref, c_ulong, sizeof
+from ctypes import windll, byref, c_ulong, sizeof, wintypes
 from PIL import Image, ImageGrab
 
 
@@ -44,8 +44,22 @@ def list_windows():
     return windows
 
 
+def get_window_bounds(hwnd):
+    """Return the window bounds including the extended frame when available."""
+    DWMWA_EXTENDED_FRAME_BOUNDS = 9
+    rect = wintypes.RECT()
+    if windll.dwmapi.DwmGetWindowAttribute(
+        hwnd,
+        DWMWA_EXTENDED_FRAME_BOUNDS,
+        byref(rect),
+        sizeof(rect),
+    ) == 0:
+        return rect.left, rect.top, rect.right, rect.bottom
+    return win32gui.GetWindowRect(hwnd)
+
+
 def screenshot_window(hwnd, path):
-    left, top, right, bottom = win32gui.GetWindowRect(hwnd)
+    left, top, right, bottom = get_window_bounds(hwnd)
     width = right - left
     height = bottom - top
 
