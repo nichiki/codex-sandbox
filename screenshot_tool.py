@@ -70,7 +70,9 @@ def screenshot_window(hwnd, path):
     mfc_dc.DeleteDC()
     win32gui.ReleaseDC(hwnd, hwnd_dc)
 
-    if result != 1:
+    # Fallback to a screen capture if PrintWindow failed or produced
+    # a completely black image (common for hardware-accelerated windows)
+    if result != 1 or image.getbbox() is None:
         image = ImageGrab.grab(bbox=(left, top, right, bottom))
 
     image.save(path)
