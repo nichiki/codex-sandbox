@@ -4,6 +4,8 @@
 
 This repository includes a small CLI utility `screenshot_tool.py` that captures a screenshot of a selected window on Windows.
 
+The tool uses the Windows `PrintWindow` API when possible and automatically falls back to a regular screen capture if the result appears blank. This helps when capturing hardware-accelerated applications such as modern browsers.
+
 ### Usage
 
 1. Install dependencies:
