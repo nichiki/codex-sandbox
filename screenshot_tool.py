@@ -2,19 +2,41 @@ import time
 import win32gui
 import win32ui
 import win32con
-from ctypes import windll
+from ctypes import windll, byref, c_ulong, sizeof
 from PIL import Image, ImageGrab
+
+
+def is_real_window(hwnd):
+    """Return True if hwnd is a visible, non-cloaked top-level window."""
+    if not win32gui.IsWindow(hwnd) or not win32gui.IsWindowVisible(hwnd):
+        return False
+    if win32gui.GetWindow(hwnd, win32con.GW_OWNER) != 0:
+        return False
+    title = win32gui.GetWindowText(hwnd)
+    if not title:
+        return False
+    ex_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
+    if ex_style & win32con.WS_EX_TOOLWINDOW:
+        return False
+    # Exclude windows that are cloaked by the system (e.g., background UWP apps)
+    DWMWA_CLOAKED = 14
+    cloaked = c_ulong(0)
+    if windll.dwmapi.DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED,
+                                           byref(cloaked),
+                                           sizeof(cloaked)) == 0:
+        if cloaked.value != 0:
+            return False
+    left, top, right, bottom = win32gui.GetWindowRect(hwnd)
+    if right - left <= 1 or bottom - top <= 1:
+        return False
+    return True
 
 
 def list_windows():
     windows = []
     def callback(hwnd, _):
-        if win32gui.IsWindowVisible(hwnd) and win32gui.GetWindow(hwnd, win32con.GW_OWNER) == 0:
-            title = win32gui.GetWindowText(hwnd)
-            if title:
-                style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
-                if not style & win32con.WS_EX_TOOLWINDOW:
-                    windows.append((hwnd, title))
+        if is_real_window(hwnd):
+            windows.append((hwnd, win32gui.GetWindowText(hwnd)))
         return True
     win32gui.EnumWindows(callback, None)
     return windows
@@ -74,6 +96,9 @@ def main():
         return
 
     hwnd = windows[index][0]
+    if not win32gui.IsWindow(hwnd):
+        print("Selected window is no longer available.")
+        return
     win32gui.SetForegroundWindow(hwnd)
     time.sleep(0.5)
     screenshot_window(hwnd, "screenshot.png")
