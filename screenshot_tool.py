@@ -3,6 +3,7 @@ import win32gui
 import win32ui
 import win32con
 import pywintypes
+import ctypes
 from ctypes import windll, byref, c_ulong, sizeof
 from PIL import Image, ImageGrab
 
@@ -79,6 +80,8 @@ def screenshot_window(hwnd, path):
 
 
 def main():
+    # Ensure DPI aware for correct coordinate calculations
+    ctypes.windll.user32.SetProcessDPIAware()
     windows = list_windows()
     if not windows:
         print("No windows found.")
@@ -98,15 +101,25 @@ def main():
         print("Invalid selection.")
         return
 
-    hwnd = windows[index][0]
+    hwnd, title = windows[index]
     if not win32gui.IsWindow(hwnd):
-        print("Selected window is no longer available.")
-        return
+        print("Selected window handle was invalid. Refreshing handle...")
+        windows = list_windows()
+        refreshed = False
+        for new_hwnd, new_title in windows:
+            if new_title == title:
+                hwnd = new_hwnd
+                print(f"Refreshed handle for '{title}'.")
+                refreshed = True
+                break
+        if not refreshed:
+            print("Window is no longer available.")
+            return
     try:
         win32gui.SetForegroundWindow(hwnd)
+        time.sleep(0.5)
     except pywintypes.error as e:
-        print(f"Could not set foreground window: {e}")
-    time.sleep(0.5)
+        print(f"Could not set foreground window: {e}. Proceeding without activation.")
     if not win32gui.IsWindow(hwnd):
         print("Window became unavailable before capture.")
         return
